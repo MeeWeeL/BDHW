@@ -20,6 +20,7 @@ ManagerID: Идентификатор менеджера.
 */
 
 WITH RECURSIVE EmployeeHierarchy AS (
+    -- Базовый случай: начинаем с Ивана Иванова (EmployeeID = 1)
     SELECT 
         EmployeeID, 
         Name, 
@@ -33,6 +34,7 @@ WITH RECURSIVE EmployeeHierarchy AS (
     
     UNION ALL
     
+    -- Рекурсивный случай: находим всех подчиненных
     SELECT 
         e.EmployeeID, 
         e.Name, 
@@ -89,13 +91,14 @@ EmployeeID: идентификатор сотрудника.
 */
 
 WITH RECURSIVE EmployeeHierarchy AS (
+    -- Базовый случай: начинаем с Ивана Иванова
     SELECT 
         EmployeeID, 
         Name, 
         ManagerID, 
         DepartmentID, 
         RoleID,
-        0 AS Level
+        0 AS Level  -- Добавляем уровень в иерархии
     FROM 
         Employees
     WHERE 
@@ -103,6 +106,7 @@ WITH RECURSIVE EmployeeHierarchy AS (
     
     UNION ALL
     
+    -- Рекурсивный случай: находим всех подчиненных с увеличением уровня
     SELECT 
         e.EmployeeID, 
         e.Name, 
@@ -116,6 +120,7 @@ WITH RECURSIVE EmployeeHierarchy AS (
         EmployeeHierarchy eh ON e.ManagerID = eh.EmployeeID
 ),
 
+-- Подсчет непосредственных подчиненных для каждого сотрудника
 DirectSubordinates AS (
     SELECT 
         ManagerID,
@@ -128,6 +133,7 @@ DirectSubordinates AS (
         ManagerID
 ),
 
+-- Список проектов для каждого сотрудника
 EmployeeProjects AS (
     SELECT 
         e.EmployeeID,
@@ -142,6 +148,7 @@ EmployeeProjects AS (
         e.EmployeeID
 ),
 
+-- Список задач и их количество для каждого сотрудника
 EmployeeTasks AS (
     SELECT 
         AssignedTo AS EmployeeID,
@@ -153,6 +160,7 @@ EmployeeTasks AS (
         AssignedTo
 )
 
+-- Основной запрос с объединением всех данных
 SELECT 
     eh.EmployeeID,
     eh.Name AS 'Имя сотрудника',
@@ -176,9 +184,9 @@ LEFT JOIN
 LEFT JOIN 
     DirectSubordinates ds ON eh.EmployeeID = ds.ManagerID
 WHERE 
-    eh.EmployeeID != 1
+    eh.EmployeeID != 1  -- Исключаем самого Ивана Иванова
 ORDER BY 
-    eh.Level, eh.Name;
+    eh.Level, eh.Name;  -- Сортируем по уровню иерархии и имени
 
 
 -- Задача 3
@@ -197,6 +205,7 @@ EmployeeID: идентификатор сотрудника.
 */
 
 WITH RECURSIVE ManagersWithSubordinates AS (
+    -- Находим всех менеджеров с подчиненными
     SELECT 
         e.EmployeeID,
         e.Name,
@@ -212,8 +221,9 @@ WITH RECURSIVE ManagersWithSubordinates AS (
     )
 ),
 
+-- Рекурсивно находим всех подчиненных менеджеров (включая подчиненных подчиненных)
 RecursiveSubordinates AS (
-    -- Base case: direct subordinates of managers
+    -- Базовый случай: непосредственные подчиненные менеджеров
     SELECT 
         m.EmployeeID AS ManagerID,
         s.EmployeeID AS SubordinateID,
@@ -222,8 +232,8 @@ RecursiveSubordinates AS (
     JOIN Employees s ON m.EmployeeID = s.ManagerID
     
     UNION ALL
-    
-    -- Recursive case: subordinates of subordinates
+
+    -- Рекурсивный случай: подчиненные подчиненных
     SELECT 
         rs.ManagerID,
         e.EmployeeID AS SubordinateID,
@@ -232,6 +242,7 @@ RecursiveSubordinates AS (
     JOIN Employees e ON rs.SubordinateID = e.ManagerID
 ),
 
+-- Подсчет общего количества подчиненных для каждого менеджера
 SubordinateCounts AS (
     SELECT 
         ManagerID,
@@ -240,6 +251,7 @@ SubordinateCounts AS (
     GROUP BY ManagerID
 ),
 
+-- Список проектов для каждого менеджера
 ManagerProjects AS (
     SELECT 
         m.EmployeeID,
@@ -250,6 +262,7 @@ ManagerProjects AS (
     GROUP BY m.EmployeeID
 ),
 
+-- Список задач для каждого менеджера
 ManagerTasks AS (
     SELECT 
         m.EmployeeID,
@@ -259,6 +272,7 @@ ManagerTasks AS (
     GROUP BY m.EmployeeID
 )
 
+-- Основной запрос с объединением всех данных
 SELECT 
     m.EmployeeID,
     m.Name AS EmployeeName,

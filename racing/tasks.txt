@@ -2,6 +2,7 @@
 -- Определить, какие автомобили из каждого класса имеют наименьшую среднюю позицию в гонках, и вывести информацию о каждом таком автомобиле для данного класса, включая его класс, среднюю позицию и количество гонок, в которых он участвовал. Также отсортировать результаты по средней позиции.
 
 WITH CarStats AS (
+    -- Собираем статистику по автомобилям: среднюю позицию и количество гонок
     SELECT 
         c.class,
         c.name AS car_name,
@@ -15,6 +16,7 @@ WITH CarStats AS (
         c.class, c.name
 ),
 MinAvgPositions AS (
+    -- Находим минимальную среднюю позицию для каждого класса
     SELECT 
         class,
         MIN(avg_position) AS min_avg_position
@@ -23,6 +25,7 @@ MinAvgPositions AS (
     GROUP BY 
         class
 )
+-- Выбираем автомобили с минимальной средней позицией в своих классах
 SELECT 
     cs.car_name AS name,
     cs.class,
@@ -33,13 +36,14 @@ FROM
 JOIN 
     MinAvgPositions m ON cs.class = m.class AND cs.avg_position = m.min_avg_position
 ORDER BY 
-    cs.avg_position;
+    cs.avg_position;  -- Сортировка по средней позиции
 
 
 -- Задача 2
 -- Определить автомобиль, который имеет наименьшую среднюю позицию в гонках среди всех автомобилей, и вывести информацию об этом автомобиле, включая его класс, среднюю позицию, количество гонок, в которых он участвовал, и страну производства класса автомобиля. Если несколько автомобилей имеют одинаковую наименьшую среднюю позицию, выбрать один из них по алфавиту (по имени автомобиля).
 
 WITH CarStats AS (
+    -- Собираем расширенную статистику по автомобилям (с информацией о классе и стране)
     SELECT 
         c.name AS car_name,
         c.class,
@@ -55,6 +59,7 @@ WITH CarStats AS (
     GROUP BY 
         c.name, c.class, cl.country
 )
+-- Выбираем автомобиль с наименьшей средней позицией
 SELECT 
     car_name AS name,
     class,
@@ -64,15 +69,16 @@ SELECT
 FROM 
     CarStats
 ORDER BY 
-    avg_position ASC,
-    car_name ASC
-LIMIT 1;
+    avg_position ASC,  -- Сначала сортируем по позиции
+    car_name ASC   -- При равенстве - по имени
+LIMIT 1;  -- Берем только лучший результат
 
 
 -- Задача 3
 -- Определить классы автомобилей, которые имеют наименьшую среднюю позицию в гонках, и вывести информацию о каждом автомобиле из этих классов, включая его имя, среднюю позицию, количество гонок, в которых он участвовал, страну производства класса автомобиля, а также общее количество гонок, в которых участвовали автомобили этих классов. Если несколько классов имеют одинаковую среднюю позицию, выбрать все из них.
 
 WITH ClassStats AS (
+    -- Собираем статистику по классам
     SELECT 
         cl.class,
         cl.country,
@@ -88,12 +94,14 @@ WITH ClassStats AS (
         cl.class, cl.country
 ),
 MinAvgPosition AS (
+    -- Находим минимальную среднюю позицию среди всех классов
     SELECT 
         MIN(class_avg_position) AS min_avg_pos
     FROM 
         ClassStats
 ),
 TopClasses AS (
+    -- Выбираем классы с минимальной средней позицией
     SELECT 
         cs.class,
         cs.country,
@@ -107,6 +115,7 @@ TopClasses AS (
         cs.class_avg_position = m.min_avg_pos
 ),
 CarDetails AS (
+    -- Собираем детальную информацию по автомобилям
     SELECT 
         c.name AS car_name,
         c.class,
@@ -119,6 +128,7 @@ CarDetails AS (
     GROUP BY 
         c.name, c.class
 )
+-- Соединяем все данные для финального результата
 SELECT 
     cd.car_name,
     cd.class,
@@ -138,6 +148,7 @@ ORDER BY
 -- Определить, какие автомобили имеют среднюю позицию лучше (меньше) средней позиции всех автомобилей в своем классе (то есть автомобилей в классе должно быть минимум два, чтобы выбрать один из них). Вывести информацию об этих автомобилях, включая их имя, класс, среднюю позицию, количество гонок, в которых они участвовали, и страну производства класса автомобиля. Также отсортировать результаты по классу и затем по средней позиции в порядке возрастания.
 
 WITH ClassAverages AS (
+    -- Рассчитываем среднюю позицию для каждого класса
     SELECT 
         c.class,
         AVG(r.position) AS class_avg_position,
@@ -149,9 +160,10 @@ WITH ClassAverages AS (
     GROUP BY 
         c.class
     HAVING 
-        COUNT(DISTINCT c.name) >= 2
+        COUNT(DISTINCT c.name) >= 2  -- Исключаем классы с одним автомобилем
 ),
 CarPerformance AS (
+    -- Собираем статистику по каждому автомобилю
     SELECT 
         c.name AS car_name,
         c.class,
@@ -167,6 +179,7 @@ CarPerformance AS (
     GROUP BY 
         c.name, c.class, cl.country
 )
+-- Выбираем автомобили, которые лучше среднего по классу
 SELECT 
     cp.car_name,
     cp.class,
@@ -178,15 +191,16 @@ FROM
 JOIN 
     ClassAverages ca ON cp.class = ca.class
 WHERE 
-    cp.car_avg_position < ca.class_avg_position
+    cp.car_avg_position < ca.class_avg_position  -- Условие превосходства
 ORDER BY 
     cp.class,
-    cp.car_avg_position ASC;
+    cp.car_avg_position ASC;  -- Сортировка по классу и позиции
 
 -- Задача 5
 -- Определить, какие классы автомобилей имеют наибольшее количество автомобилей с низкой средней позицией (больше 3.0) и вывести информацию о каждом автомобиле из этих классов, включая его имя, класс, среднюю позицию, количество гонок, в которых он участвовал, страну производства класса автомобиля, а также общее количество гонок для каждого класса. Отсортировать результаты по количеству автомобилей с низкой средней позицией.
 
 WITH CarPerformance AS (
+    -- Собираем базовую статистику по автомобилям
     SELECT 
         c.name AS car_name,
         c.class AS car_class,
@@ -203,6 +217,7 @@ WITH CarPerformance AS (
         c.name, c.class, cl.country
 ),
 ClassStats AS (
+    -- Анализируем классы: считаем слабые автомобили и общую статистику
     SELECT 
         class,
         COUNT(CASE WHEN average_position > 3.0 THEN 1 END) AS low_position_count,
@@ -219,8 +234,9 @@ ClassStats AS (
     GROUP BY 
         class
     HAVING 
-        COUNT(CASE WHEN average_position > 3.0 THEN 1 END) > 0
+        COUNT(CASE WHEN average_position > 3.0 THEN 1 END) > 0  -- Только классы со слабыми авто
 )
+-- Формируем итоговый отчет
 SELECT 
     cp.car_name,
     cp.car_class,
@@ -234,8 +250,8 @@ FROM
 JOIN 
     ClassStats cs ON cp.car_class = cs.class
 WHERE 
-    cp.average_position > 3.0
+    cp.average_position > 3.0  -- Только слабые автомобили
 ORDER BY 
-    cs.low_position_count DESC,
+    cs.low_position_count DESC,  -- Сначала классы с наибольшим количеством слабых авто
     cp.car_class,
     cp.average_position DESC;

@@ -3,15 +3,16 @@
 -- Определить, какие клиенты сделали более двух бронирований в разных отелях, и вывести информацию о каждом таком клиенте, включая его имя, электронную почту, телефон, общее количество бронирований, а также список отелей, в которых они бронировали номера (объединенные в одно поле через запятую с помощью CONCAT). Также подсчитать среднюю длительность их пребывания (в днях) по всем бронированиям. Отсортировать результаты по количеству бронирований в порядке убывания.
 
 WITH CustomerHotels AS (
+    -- Собираем статистику по клиентам, отелям и бронированиям
     SELECT 
         c.ID_customer,
         c.name,
         c.email,
         c.phone,
-        COUNT(DISTINCT b.ID_booking) AS total_bookings,
-        COUNT(DISTINCT h.ID_hotel) AS distinct_hotels,
-        GROUP_CONCAT(DISTINCT h.name SEPARATOR ', ') AS hotel_names,
-        AVG(DATEDIFF(b.check_out_date, b.check_in_date)) AS avg_stay_duration
+        COUNT(DISTINCT b.ID_booking) AS total_bookings,  -- Общее количество бронирований
+        COUNT(DISTINCT h.ID_hotel) AS distinct_hotels,    -- Количество уникальных отелей
+        GROUP_CONCAT(DISTINCT h.name SEPARATOR ', ') AS hotel_names,  -- Список отелей через запятую
+        AVG(DATEDIFF(b.check_out_date, b.check_in_date)) AS avg_stay_duration  -- Средняя продолжительность пребывания
     FROM 
         Customer c
     JOIN 
@@ -23,21 +24,22 @@ WITH CustomerHotels AS (
     GROUP BY 
         c.ID_customer, c.name, c.email, c.phone
     HAVING 
-        COUNT(DISTINCT h.ID_hotel) > 1
+        COUNT(DISTINCT h.ID_hotel) > 1  -- Фильтр: бронирования в более чем 1 отеле
 )
+-- Основной запрос с фильтрацией и сортировкой
 SELECT 
     name,
     email,
     phone,
     total_bookings,
     hotel_names,
-    ROUND(avg_stay_duration, 4) AS avg_stay_duration
+    ROUND(avg_stay_duration, 4) AS avg_stay_duration  -- Округление средней продолжительности
 FROM 
     CustomerHotels
 WHERE 
-    total_bookings > 2
+    total_bookings > 2  -- Только клиенты с более чем 2 бронированиями
 ORDER BY 
-    total_bookings DESC;
+    total_bookings DESC;  -- Сортировка по количеству бронирований
 
 
 
@@ -52,9 +54,9 @@ ORDER BY
  SELECT 
     c.ID_customer,
     c.name,
-    COUNT(DISTINCT b.ID_booking) AS total_bookings,
-    SUM(DATEDIFF(b.check_out_date, b.check_in_date) * r.price) AS total_spent,
-    COUNT(DISTINCT h.ID_hotel) AS distinct_hotels
+    COUNT(DISTINCT b.ID_booking) AS total_bookings,  -- Количество бронирований
+    SUM(DATEDIFF(b.check_out_date, b.check_in_date) * r.price) AS total_spent,  -- Общая сумма расходов
+    COUNT(DISTINCT h.ID_hotel) AS distinct_hotels  -- Количество уникальных отелей
 FROM 
     Customer c
 JOIN 
@@ -66,11 +68,12 @@ JOIN
 GROUP BY 
     c.ID_customer, c.name
 HAVING 
-    COUNT(DISTINCT b.ID_booking) > 2
-    AND COUNT(DISTINCT h.ID_hotel) > 1
-    AND SUM(DATEDIFF(b.check_out_date, b.check_in_date) * r.price) > 500
+    -- Условия фильтрации:
+    COUNT(DISTINCT b.ID_booking) > 2  -- Более 2 бронирований
+    AND COUNT(DISTINCT h.ID_hotel) > 1  -- В более чем 1 отеле (в задании сказано "В разных")
+    AND SUM(DATEDIFF(b.check_out_date, b.check_in_date) * r.price) > 500  -- Расходы > $500
 ORDER BY 
-    total_spent ASC;
+    total_spent ASC;  -- Сортировка по возрастанию суммы расходов
 
 
 -- Задача 3
@@ -99,6 +102,7 @@ visited_hotels: список уникальных отелей, которые �
 Отсортируйте клиентов так, чтобы сначала шли клиенты с «дешевыми» отелями, затем со «средними» и в конце — с «дорогими». */
 
 WITH HotelCategories AS (
+    -- Классификация отелей по средней цене номера
     SELECT 
         h.ID_hotel,
         h.name AS hotel_name,
@@ -116,11 +120,12 @@ WITH HotelCategories AS (
 ),
 
 CustomerHotels AS (
+    -- Сбор информации о клиентах и посещенных ими отелях
     SELECT 
         c.ID_customer,
         c.name,
-        GROUP_CONCAT(DISTINCT hc.hotel_name ORDER BY hc.hotel_name SEPARATOR ', ') AS visited_hotels,
-        GROUP_CONCAT(DISTINCT hc.hotel_category) AS categories
+        GROUP_CONCAT(DISTINCT hc.hotel_name ORDER BY hc.hotel_name SEPARATOR ', ') AS visited_hotels,  -- Список отелей
+        GROUP_CONCAT(DISTINCT hc.hotel_category) AS categories  -- Категории отелей
     FROM 
         Customer c
     JOIN 
@@ -133,21 +138,22 @@ CustomerHotels AS (
         c.ID_customer, c.name
 )
 
+-- Определение предпочтений клиентов и финальная выборка
 SELECT 
     ID_customer,
     name,
     CASE 
-        WHEN categories LIKE '%Дорогой%' THEN 'Дорогой'
-        WHEN categories LIKE '%Средний%' THEN 'Средний'
-        ELSE 'Дешевый'
-    END AS preferred_hotel_type,
-    visited_hotels
+        WHEN categories LIKE '%Дорогой%' THEN 'Дорогой'  -- Приоритет дорогим отелям
+        WHEN categories LIKE '%Средний%' THEN 'Средний'  -- Затем средним
+        ELSE 'Дешевый'  -- Иначе дешевые
+    END AS preferred_hotel_type,  -- Предпочитаемая категория
+    visited_hotels  -- Список посещенных отелей
 FROM 
     CustomerHotels
 ORDER BY 
-    CASE 
-        WHEN categories LIKE '%Дорогой%' THEN 3
-        WHEN categories LIKE '%Средний%' THEN 2
-        ELSE 1
+    CASE   -- Специальная сортировка по категориям
+        WHEN categories LIKE '%Дорогой%' THEN 3  -- Дорогие последние
+        WHEN categories LIKE '%Средний%' THEN 2  -- Средние в середине
+        ELSE 1  -- Дешевые первые
     END,
-    name;
+    name;  -- Затем по имени
